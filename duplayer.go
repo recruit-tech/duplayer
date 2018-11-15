@@ -14,6 +14,8 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/crypto/ssh/terminal"
+
 	humanize "github.com/dustin/go-humanize"
 )
 
@@ -66,7 +68,7 @@ type history struct {
 
 // image is struct of docker image histories
 type image struct {
-	history []history `json:"history,omitempty"`
+	History []history `json:"history,omitempty"`
 }
 
 // layer is data of a layer
@@ -230,7 +232,7 @@ func makeMetaData(manifests []manifest, files map[string]files, imageMetas map[s
 	for _, manifest := range manifests {
 		var layers layers
 		i := 0
-		for _, history := range imageMetas[manifest.Config].history {
+		for _, history := range imageMetas[manifest.Config].History {
 			if !history.EmptyLayer {
 				layerID := filepath.Base(filepath.Dir(manifest.Layers[i]))
 				layer := &layer{layerID, files[layerID], history.CreatedBy, sizeMap[layerID]}
