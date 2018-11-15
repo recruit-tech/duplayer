@@ -13,5 +13,4 @@ func main() {
 	if err := duplayer.Duplayer(); err != nil {
 		log.Fatal(err)
 	}
-
 }
