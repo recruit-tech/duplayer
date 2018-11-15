@@ -282,7 +282,12 @@ func pad(s string, n int) string {
 
 func openStream(path string) (*os.File, error) {
 	if path == "-" {
-		return os.Stdin, nil
+		if terminal.IsTerminal(0) {
+			flag.Usage()
+			os.Exit(64)
+		} else {
+			return os.Stdin, nil
+		}
 	}
 	return os.Open(path)
 }
