@@ -92,7 +92,7 @@ func main() {
 func run() error {
 
 	tarPath := flag.String("f", "-", "layer.tar path")
-	saveLimitSize := flag.Int("l", 10, "min save size for showing(KB)")
+	reduceLimitSize := flag.Int("l", 10, "min reduce size for showing(KB)")
 	maxFileNum := flag.Int("M", 10, "max num of duplicate filePath for showing")
 	showFileSize := flag.Int("m", 10, "min size of duplicate filePath for showing")
 
@@ -111,26 +111,26 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	if err := showDuplicate(layersMap, *lineWidth, *saveLimitSize, *maxFileNum, *showFileSize); err != nil {
+	if err := showDuplicate(layersMap, *lineWidth, *reduceLimitSize, *maxFileNum, *showFileSize); err != nil {
 		return err
 	}
 	return nil
 
 }
 
-func showDuplicate(layersMap layersMap, lineWidth int, saveLimitSize int, maxFileNum int, showFileSize int) error {
+func showDuplicate(layersMap layersMap, lineWidth int, reduceLimitSize int, maxFileNum int, showFileSize int) error {
 
 	for repoTag, layers := range layersMap {
 		fmt.Println(strings.Repeat("=", lineWidth))
 		fmt.Printf("RepoTag[0] : %s\n", repoTag)
 
 		for i, layer := range layers {
-			fmt.Printf("[%d] %s \t %dfiles\t $ %s\n", i, humanizeBytes(layer.size), layer.files.numOfFiles, layer.cmd)
+			fmt.Printf("[%d] %s \t %dfiles\t $ %s\n", i, humanizeBytes(layer.size), layer.files.numOfFiles, strings.Replace(layer.cmd, "\t", " ", -1))
 		}
 
 		fmt.Println(strings.Repeat("=", lineWidth))
 
-		fmt.Printf("\nif you merge [lower] and [upper] save num_of_files data_size (only show over %dKB save)\n\n", saveLimitSize)
+		fmt.Printf("\nif you merge [lower] and [upper] reduce num_of_files data_size (only show over %dKB reduce)\n\n", reduceLimitSize)
 
 		for i := range layers {
 			if i+1 < len(layers) {
@@ -138,11 +138,12 @@ func showDuplicate(layersMap layersMap, lineWidth int, saveLimitSize int, maxFil
 					lower := layers[i]
 					upper := layers[j]
 					dupInfo := upper.checkDuplicateFiles(lower)
-					if dupInfo.totalSize > int64(saveLimitSize*1024) {
+					if dupInfo.totalSize > int64(reduceLimitSize*1024) {
 						fmt.Println(strings.Repeat("=", lineWidth))
-						fmt.Printf("[%d] %s\n", i, lower.cmd)
-						fmt.Printf("[%d] %s\n", j, upper.cmd)
-						fmt.Printf("save : %d files (%s)\n", dupInfo.numOfFiles, humanizeBytes(dupInfo.totalSize))
+						fmt.Printf("[%d] %s\n", i, strings.Replace(lower.cmd, "\t", " ", -1))
+						fmt.Printf("[%d] %s\n", j, strings.Replace(upper.cmd, "\t", " ", -1))
+						fmt.Println(strings.Repeat("-", lineWidth))
+						fmt.Printf("reduce : %d files (%s)\n", dupInfo.numOfFiles, humanizeBytes(dupInfo.totalSize))
 						sort.Sort(sort.Reverse(dupInfo.files))
 						for k := 0; k < len(dupInfo.files) && k < maxFileNum; k++ {
 							if dupInfo.files[k].fileSize > int64(showFileSize*1024) {
@@ -156,6 +157,7 @@ func showDuplicate(layersMap layersMap, lineWidth int, saveLimitSize int, maxFil
 			}
 		}
 		fmt.Println(strings.Repeat("=", lineWidth))
+
 	}
 	return nil
 }
