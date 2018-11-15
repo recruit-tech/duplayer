@@ -86,7 +86,7 @@ type layersMap map[string]layers
 func Duplayer() error {
 
 	tarPath := flag.String("f", "-", "layer.tar path")
-	saveLimitSize := flag.Int("l", 10, "min save size for showing( KB )")
+	saveLimitSize := flag.Int("l", 10, "min save size for showing(KB)")
 	maxFileNum := flag.Int("M", 10, "max num of duplicate filePath for showing")
 	showFileSize := flag.Int("m", 10, "min size of duplicate filePath for showing")
 
