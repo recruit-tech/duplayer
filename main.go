@@ -1,4 +1,4 @@
-package duplayer
+package main
 
 import (
 	"archive/tar"
@@ -14,9 +14,8 @@ import (
 	"strings"
 	"time"
 
-	"golang.org/x/crypto/ssh/terminal"
-
 	humanize "github.com/dustin/go-humanize"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 const (
@@ -82,8 +81,15 @@ type layer struct {
 type layers []*layer
 type layersMap map[string]layers
 
-// Duplayer show duplicate files between upperlayer and lowerlayer
-func Duplayer() error {
+func main() {
+	log.SetPrefix("duplayer: ")
+	log.SetFlags(0)
+	if err := run(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func run() error {
 
 	tarPath := flag.String("f", "-", "layer.tar path")
 	saveLimitSize := flag.Int("l", 10, "min save size for showing(KB)")

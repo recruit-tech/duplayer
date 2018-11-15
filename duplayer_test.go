@@ -1,4 +1,4 @@
-package duplayer
+package main
 
 import (
 	"testing"
