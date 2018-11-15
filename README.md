@@ -1,6 +1,8 @@
 # duplayer
 A tool for discovering how to reduce the size of Docker Image.
 It shows how much image size is reduced when each layer is merged and which files are duplicated.
+![duplayer](images/duplayer.png)
+
 
 ## Installation
 ```bash
@@ -8,7 +10,7 @@ go get github.com/recruit-tech/duplayer
 ```
 
 ## How to use
-```bash 
+```bash
 docker save image:tag | duplayer | less
 ```
 or
