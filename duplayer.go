@@ -29,30 +29,34 @@ type manifest struct {
 	Layers   []string `json:"Layers"`
 }
 
-type Files struct {
+type files struct {
 	whFiles    map[string]int64
 	opqDirs    map[string]int64
 	filePaths  map[string]int64
 	numOfFiles int64
 }
 
-type FilesInfo struct {
+type filesInfo struct {
 	totalSize  int64
 	numOfFiles int64
-	files      FileInfos
+	files      fileInfos
 }
 
-type FileInfo struct {
+// fileInfo is file data for sort
+type fileInfo struct {
 	filePath string
 	fileSize int64
 }
-type FileInfos []FileInfo
 
-func (a FileInfos) Len() int           { return len(a) }
-func (a FileInfos) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a FileInfos) Less(i, j int) bool { return a[i].fileSize < a[j].fileSize }
+// fileInfos is  files data for sort
+type fileInfos []fileInfo
 
-type History struct {
+func (a fileInfos) Len() int           { return len(a) }
+func (a fileInfos) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a fileInfos) Less(i, j int) bool { return a[i].fileSize < a[j].fileSize }
+
+// history is struct of a docker image history
+type history struct {
 	Created    time.Time `json:"created"`
 	Author     string    `json:"author,omitempty"`
 	CreatedBy  string    `json:"created_by,omitempty"`
@@ -60,20 +64,23 @@ type History struct {
 	EmptyLayer bool      `json:"empty_layer,omitempty"`
 }
 
-type Image struct {
-	History []History `json:"history,omitempty"`
+// image is struct of docker image histories
+type image struct {
+	history []history `json:"history,omitempty"`
 }
 
-type Layer struct {
+// layer is data of a layer
+type layer struct {
 	layerID string
-	files   Files
+	files   files
 	cmd     string
 	size    int64
 }
 
-type Layers []*Layer
-type LayersMap map[string]Layers
+type layers []*layer
+type layersMap map[string]layers
 
+// Duplayer show duplicate files between upperlayer and lowerlayer
 func Duplayer() error {
 
 	tarPath := flag.String("f", "-", "layer.tar path")
@@ -103,7 +110,7 @@ func Duplayer() error {
 
 }
 
-func showDuplicate(layersMap LayersMap, lineWidth int, saveLimitSize int, maxFileNum int, showFileSize int) error {
+func showDuplicate(layersMap layersMap, lineWidth int, saveLimitSize int, maxFileNum int, showFileSize int) error {
 
 	for repoTag, layers := range layersMap {
 		fmt.Println(strings.Repeat("=", lineWidth))
@@ -117,7 +124,7 @@ func showDuplicate(layersMap LayersMap, lineWidth int, saveLimitSize int, maxFil
 
 		fmt.Printf("\nif you merge [lower] and [upper] save num_of_files data_size (only show over %dKB save)\n\n", saveLimitSize)
 
-		for i, _ := range layers {
+		for i := range layers {
 			if i+1 < len(layers) {
 				for j := i + 1; j < len(layers); j++ {
 					lower := layers[i]
@@ -145,19 +152,19 @@ func showDuplicate(layersMap LayersMap, lineWidth int, saveLimitSize int, maxFil
 	return nil
 }
 
-func (upper *Layer) checkDuplicateFiles(lower *Layer) FilesInfo {
-	dupInfo := FilesInfo{0, 0, []FileInfo{}}
+func (upper *layer) checkDuplicateFiles(lower *layer) filesInfo {
+	dupInfo := filesInfo{0, 0, []fileInfo{}}
 	for lowerFile, fileSize := range lower.files.filePaths {
 		if upper.files.isDuplicate(lowerFile) {
 			dupInfo.totalSize += fileSize
 			dupInfo.numOfFiles++
-			dupInfo.files = append(dupInfo.files, FileInfo{lowerFile, fileSize})
+			dupInfo.files = append(dupInfo.files, fileInfo{lowerFile, fileSize})
 		}
 	}
 	return dupInfo
 }
 
-func (upper Files) isDuplicate(path string) bool {
+func (upper files) isDuplicate(path string) bool {
 	if _, ok := upper.filePaths[path]; ok == true {
 		return true
 	}
@@ -175,12 +182,12 @@ func (upper Files) isDuplicate(path string) bool {
 	return false
 }
 
-func readLayers(rc io.ReadCloser) (LayersMap, error) {
+func readLayers(rc io.ReadCloser) (layersMap, error) {
 	defer rc.Close()
 	archive := tar.NewReader(rc)
 	var manifests []manifest
-	filesInLayers := make(map[string]Files)
-	imageMetas := make(map[string]Image)
+	filesInLayers := make(map[string]files)
+	imageMetas := make(map[string]image)
 	sizeMap := make(map[string]int64)
 	for {
 		header, err := archive.Next()
@@ -203,7 +210,7 @@ func readLayers(rc io.ReadCloser) (LayersMap, error) {
 			filesInLayers[layerID] = files
 			sizeMap[layerID] = header.Size
 		case strings.HasSuffix(header.Name, ".json"):
-			var imageMeta Image
+			var imageMeta image
 			if err := json.NewDecoder(archive).Decode(&imageMeta); err != nil {
 				return nil, err
 			}
@@ -218,15 +225,15 @@ func readLayers(rc io.ReadCloser) (LayersMap, error) {
 	return layersMap, nil
 }
 
-func makeMetaData(manifests []manifest, files map[string]Files, imageMetas map[string]Image, sizeMap map[string]int64) (LayersMap, error) {
-	layersMap := make(LayersMap)
+func makeMetaData(manifests []manifest, files map[string]files, imageMetas map[string]image, sizeMap map[string]int64) (layersMap, error) {
+	layersMap := make(layersMap)
 	for _, manifest := range manifests {
-		var layers Layers
+		var layers layers
 		i := 0
-		for _, history := range imageMetas[manifest.Config].History {
+		for _, history := range imageMetas[manifest.Config].history {
 			if !history.EmptyLayer {
 				layerID := filepath.Base(filepath.Dir(manifest.Layers[i]))
-				layer := &Layer{layerID, files[layerID], history.CreatedBy, sizeMap[layerID]}
+				layer := &layer{layerID, files[layerID], history.CreatedBy, sizeMap[layerID]}
 				layers = append(layers, layer)
 				i++
 			}
@@ -236,9 +243,9 @@ func makeMetaData(manifests []manifest, files map[string]Files, imageMetas map[s
 	return layersMap, nil
 }
 
-func getFilesInLayer(image *tar.Reader) (Files, error) {
+func getFilesInLayer(image *tar.Reader) (files, error) {
 	archive := tar.NewReader(image)
-	imgFile := Files{make(map[string]int64), make(map[string]int64), make(map[string]int64), 0}
+	imgFile := files{make(map[string]int64), make(map[string]int64), make(map[string]int64), 0}
 	for {
 		header, err := archive.Next()
 		if err == io.EOF {
@@ -274,7 +281,6 @@ func pad(s string, n int) string {
 func openStream(path string) (*os.File, error) {
 	if path == "-" {
 		return os.Stdin, nil
-	} else {
-		return os.Open(path)
 	}
+	return os.Open(path)
 }

@@ -6,7 +6,7 @@ import (
 
 func TestIsDuplicated(t *testing.T) {
 
-	upper := Files{
+	upper := files{
 		map[string]int64{"a1": 10, "b1/b2": 20},
 		map[string]int64{"s1": 1, "t1/t2": 1},
 		map[string]int64{"x1": 14, "y1/y2": 25},
